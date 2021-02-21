@@ -1,0 +1,66 @@
+- hosts: localhost
+  vars_files:
+    - vault.yml
+  tasks:
+    - name: "Installing Python"
+      package:
+        name: Python3
+        state: present
+    - name: "Installing Boto3 module"
+      pip: 
+        name: boto3
+        state: present
+    - name: "Launching K8s-workstation Instance"
+      ec2_instance: 
+        region: ap-south-1
+        image_id: ami-08e0ca9924195beba
+        instance_type: t2.micro
+        vpc_subnet_id: subnet-0b959e6f65ba33675
+        security_group: sg-0170b044cc0cf0ac5
+        key_name: my-key
+        state: present
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        name: "K8s-workstation"
+        network:
+          assign_public_ip: yes
+      register: master
+      - name: "Launching K8s-servera Instance"
+        ec2_instance: 
+          region: ap-south-1
+          image_id: ami-08e0ca9924195beba
+          instance_type: t2.micro
+          vpc_subnet_id: subnet-0b959e6f65ba33675
+          security_group: sg-0170b044cc0cf0ac5
+          key_name: my-key
+          state: present
+          aws_access_key: "{{ aws_access_key }}"
+          aws_secret_key: "{{ aws_secret_key }}"
+          name: "K8s-servera"
+          network:
+            assign_public_ip: yes
+        register: servera
+      - name: "Launching K8s-serverb Instance"
+        ec2_instance: 
+          region: ap-south-1
+          image_id: ami-08e0ca9924195beba
+          instance_type: t2.micro
+          vpc_subnet_id: subnet-0b959e6f65ba33675
+          security_group: sg-0170b044cc0cf0ac5
+          key_name: my-key
+          state: present
+          aws_access_key: "{{ aws_access_key }}"
+          aws_secret_key: "{{ aws_secret_key }}"
+          name: "K8s-serverb"
+          network:
+            assign_public_ip: yes
+        register: serverb
+      - name: "Updating Inventory"
+        blockinfile:
+          path: ./hosts
+          block: |
+                  [master]
+                  {{ master.instance[0].public_ip_address }}
+                  [slaves]
+                  {{ servera.instance[0].public_ip_address }}
+                  {{ serverb.instance[0].public_ip_address }}
